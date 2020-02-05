@@ -1,0 +1,30 @@
+{
+  "name": "bilogsqlapi",
+  "version": "1.0.0",
+  "description": "Bilog SQL and Node.js API",
+  "main": "index.js",
+  "scripts": {
+    "start": "NODE_ENV=production nodemon server.js",
+    "start-dev": "NODE_ENV=development nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com-personal:juanpernu/BilogSQLAPI.git"
+  },
+  "keywords": [
+    "API",
+    "Bilog",
+    "SQL",
+    "Node"
+  ],
+  "author": "Juan Manuel Pernumian",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "mssql": "^6.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
