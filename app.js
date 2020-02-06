@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
-const testRoutes = require('./routes/test');
+const loginRoutes = require('./resources/login/routes');
 
-app.get('/', testRoutes);
+app.use('/login', loginRoutes);
 
 module.exports = app;
