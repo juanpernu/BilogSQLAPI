@@ -1,7 +1,16 @@
+const bodyParser = require('body-parser');
+const morgan = require('morgan');
 const express = require('express');
-const app = express();
 const loginRoutes = require('./resources/login/routes');
 
-app.use('/login', loginRoutes);
+const App = express();
 
-module.exports = app;
+// Middleweares
+if (process.env.NODE_ENV === 'development') {
+  App.use(morgan('dev'));
+}
+
+App.use(bodyParser.json());
+App.use('/login', loginRoutes);
+
+module.exports = App;

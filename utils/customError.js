@@ -1,23 +1,16 @@
 class CustomError extends Error {
-  constructor({ message, code, stack, tags, details }) {
+  constructor({ message, code }) {
     super(message);
-
-    if (stack) {
-      super.stack = stack;
-    }
-
     this.code = code;
-    this.tags = tags;
-    this.details = details;
   }
 
-  static handleError(message = 'Unexpected error', error = {}, next) {
+  static handleError(message = 'Unexpected error', error = {}) {
     const status = error.status || error.code || 500;
     if (error instanceof CustomError) {
-      return next(error);
+      return error;
     }
-    const err = new CustomError({ message, code: status, stack: error.stack || undefined });
-    return next(err);
+    const err = new CustomError({ message, code: status });
+    return err;
   }
 }
 
