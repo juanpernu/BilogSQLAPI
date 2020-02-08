@@ -1,12 +1,9 @@
 class APIFeatures {
-  constructor(user, user_bilog, password) {
-    this.user = user,
-    this.user_bilog = user_bilog,
-    this.password = password,
-    this.query
+  constructor() {
+    this.query = ''
   }
 
-  makeConfig(isFirstConnection, server = 'bilog.dyndns.org', port = 5100, database = 'clientes') {
+  makeConfig(isFirstConnection, userData, server = 'bilog.dyndns.org', port = 5100, database = 'clientes') {
     // Here I hardcode the first connection because
     // for all the users is the same. We have to check this.
     if (isFirstConnection){
@@ -21,8 +18,8 @@ class APIFeatures {
     }
 
     return {
-      user: this.user,
-      password: this.password,
+      user: userData.user,
+      password: userData.password,
       server,
       port,
       database,

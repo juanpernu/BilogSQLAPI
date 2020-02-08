@@ -1,7 +1,7 @@
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const express = require('express');
-const loginRoutes = require('./resources/login/routes');
+const permissionsRoutes = require('./resources/permissions/routes');
 
 const App = express();
 
@@ -11,6 +11,6 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 App.use(bodyParser.json());
-App.use('/login', loginRoutes);
+App.use('/permissions', permissionsRoutes);
 
 module.exports = App;
