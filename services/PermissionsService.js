@@ -14,7 +14,7 @@ async function validateUser(user, user_bilog, password, next) {
 
   try {
     // Get user database data
-    let response = await SQLService.getDataFromServer(config, features.getQuery(), next);
+    let response = await SQLService.getUserDataFromServer(config, features.getQuery(), next);
     const flatted = features.flattResponse(response, 2);
 
     // Make a new connection with the user database data
@@ -24,11 +24,9 @@ async function validateUser(user, user_bilog, password, next) {
     features.newQuery(MakeQueries('SELECT_USER_DATABASE', user));
 
     // Get user data
-    const userData = await SQLService.getDataFromServer(newConfig, features.getQuery(), next);
+    const newPool = await SQLService.connectToServer(newConfig, next);
+    const userData = await SQLService.makeRequest(newPool, features.getQuery(), next);
     newUser.updateUserData(...userData);
-
-    const permissions = await this.validatePermissions(newUser, newConfig, next);
-    
 
     if (userData && !newUser.isEnabled) {
       const error = CustomError.handleError({
@@ -38,6 +36,9 @@ async function validateUser(user, user_bilog, password, next) {
       throw next(error);
     }
 
+    const permissions = await this.getPermissions(newUser, newPool, next);
+    newPool.close();
+
     return permissions;
   } catch (err) {
     const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
@@ -45,18 +46,34 @@ async function validateUser(user, user_bilog, password, next) {
   }
 }
 
-async function validatePermissions(user, config, next, permissionItemToValidate = '', permissionToValidate = '') {
+async function validatePermissions(user, pool, next, permissionItemToValidate = '', permissionToValidate = '') {
   const features = new APIFeatures();
   const isFirstLogin = !user.isSupervisor && permissionItemToValidate === '' && permissionToValidate === '';
   
   if (isFirstLogin || user.isSupervisor) {
     features.newQuery(MakeQueries('VALIDATE_PERMISSION', user.id));
-    const permissions = await SQLService.getDataFromServer(config, features.getQuery(), next);
+    try {
+      const permissions = await SQLService.makeRequest(pool, features.getQuery());
+      return permissions;
+    } catch (err) {
+      const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
+      throw next(error);
+    }
+  }
+}
+
+async function getPermissions(user, pool, next) {
+  try {
+    const permissions = await this.validatePermissions(user, pool, next);
     return permissions;
+  } catch (err) {
+    const error = CustomError.handleError(err.message || 'Unexpected error while trying get user permissions', err);
+    throw next(error);
   }
 }
 
 module.exports = {
   validateUser,
-  validatePermissions
+  validatePermissions,
+  getPermissions
 }
