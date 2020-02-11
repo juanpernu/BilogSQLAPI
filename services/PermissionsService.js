@@ -4,6 +4,14 @@ const CustomError = require('../utils/CustomError');
 const MakeQueries = require('../utils/Queries');
 const SQLService = require('../services/SQLService');
 
+/**
+ * Method to validate that the user exist on
+ * the database and is still operating.
+ * @param {String} user User input data
+ * @param {String} user_bilog Bilog user input data
+ * @param {String} password User password input data
+ * @param {Function} next Error middleware method
+ */
 async function validateUser(user, user_bilog, password, next) {
   const newUser = new User({ user, user_bilog, password });
   const features = new APIFeatures();
@@ -46,6 +54,15 @@ async function validateUser(user, user_bilog, password, next) {
   }
 }
 
+/**
+ * Method to validate if the user has the permissions
+ * to operate in the sistem.
+ * @param {User} user User instance
+ * @param {InstanceType} pool Server pool connection
+ * @param {Function} next Error middleware method
+ * @param {String} permissionItemToValidate Permission item to validate
+ * @param {String} permissionToValidate General permission to validate
+ */
 async function validatePermissions(user, pool, next, permissionItemToValidate = '', permissionToValidate = '') {
   const features = new APIFeatures();
   const isFirstLogin = !user.isSupervisor && permissionItemToValidate === '' && permissionToValidate === '';
@@ -62,6 +79,12 @@ async function validatePermissions(user, pool, next, permissionItemToValidate = 
   }
 }
 
+/**
+ * Method to get users permissions.
+ * @param {User} user User instance
+ * @param {InstanceType} pool Server pool connection
+ * @param {Function} next Error middleware method
+ */
 async function getPermissions(user, pool, next) {
   try {
     const permissions = await this.validatePermissions(user, pool, next);
