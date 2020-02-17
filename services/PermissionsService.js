@@ -18,11 +18,9 @@ async function validateUser(user, user_bilog, password, next) {
 
   // Make the query and the config for the first connection
   features.newQuery(MakeQueries('GET_USER_DATABASE', user_bilog));
-  const config = features.makeConfig(true, newUser.access);
-
   try {
     // Get user database data
-    let response = await SQLService.getUserDataFromServer(config, features.getQuery(), next);
+    let response = await SQLService.getUserDataFromServer(newUser, features.getQuery(), next);
     const flatted = features.flattResponse(response, 2);
 
     // Make a new connection with the user database data
@@ -41,6 +39,7 @@ async function validateUser(user, user_bilog, password, next) {
         message: 'Unabled user :: This user is not enabled',
         code: 401
       });
+      newPool.close();
       throw next(error);
     }
 
@@ -63,20 +62,10 @@ async function validateUser(user, user_bilog, password, next) {
  * @param {String} permissionItemToValidate Permission item to validate
  * @param {String} permissionToValidate General permission to validate
  */
-async function validatePermissions(user, pool, next, permissionItemToValidate = '', permissionToValidate = '') {
-  const features = new APIFeatures();
+async function validatePermissions(user, permissionItemToValidate = '', permissionToValidate = '') {
   const isFirstLogin = !user.isSupervisor && permissionItemToValidate === '' && permissionToValidate === '';
-  
-  if (isFirstLogin || user.isSupervisor) {
-    features.newQuery(MakeQueries('VALIDATE_PERMISSION', user.id));
-    try {
-      const permissions = await SQLService.makeRequest(pool, features.getQuery());
-      return permissions;
-    } catch (err) {
-      const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
-      throw next(error);
-    }
-  }
+  if (isFirstLogin || user.isSupervisor) return true;
+  return false;
 }
 
 /**
@@ -86,9 +75,27 @@ async function validatePermissions(user, pool, next, permissionItemToValidate = 
  * @param {Function} next Error middleware method
  */
 async function getPermissions(user, pool, next) {
+  const features = new APIFeatures();
   try {
-    const permissions = await this.validatePermissions(user, pool, next);
-    return permissions;
+    const hasPermissions = await this.validatePermissions(user);
+
+    // If the user is supervisor or is the first
+    // login of the user, doesn't make sense get
+    // the user permissions from the database.
+    if (!hasPermissions) {
+      features.newQuery(MakeQueries('VALIDATE_PERMISSION', user.id));
+      try {
+        const permissions = await SQLService.makeRequest(pool, features.getQuery());
+        user.setUserPermissions(permissions);
+      } catch (err) {
+        const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
+        throw next(error);
+      }
+    }
+
+    // If the user is supervisor or is the first login
+    // here just return the user object without permissions
+    return user;
   } catch (err) {
     const error = CustomError.handleError(err.message || 'Unexpected error while trying get user permissions', err);
     throw next(error);

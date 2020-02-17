@@ -3,16 +3,17 @@ class APIFeatures {
     this.query = ''
   }
 
-  makeConfig(isFirstConnection, userData, server = 'bilog.dyndns.org', port = 5100, database = 'clientes') {
+  makeConfig(isFirstConnection, userData, server, port, database = 'clientes') {
     // Here I hardcode the first connection because
     // for all the users is the same. We have to check this.
     if (isFirstConnection){
       return {
-        user: 'juan',
-        password: 'Juan$1404',
+        user: 'consulta',
+        password: 'cons1234',
         server,
         port,
         database,
+        connectionTimeout: 3000,
         parseJSON: true,
       }
     }
@@ -23,6 +24,7 @@ class APIFeatures {
       server,
       port,
       database,
+      connectionTimeout: 3000,
       parseJSON: true,
     }
   }

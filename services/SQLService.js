@@ -1,5 +1,7 @@
 const sql = require('mssql');
 const CustomError = require('../utils/CustomError');
+const { servers: { first, second } } = require('../utils/ServersAccess');
+const APIFeatures = require('../domains/ApiFeatures');
 
 /**
  * Method to get the user data on the first login.
@@ -7,8 +9,12 @@ const CustomError = require('../utils/CustomError');
  * @param {String} query Query to make the server request
  * @param {Function} next Error middleware method
  */
-async function getUserDataFromServer(config, query, next) {
-  const pool = await this.connectToServer(config, next);
+async function getUserDataFromServer(user, query, next) {
+  const features = new APIFeatures();
+
+  const config = features.makeConfig(true, user.access, first.server, first.port);
+  const bkConfig = features.makeConfig(true, user.access, second.server, second.port);
+  let pool = await this.connectToServer(config, next, bkConfig);
 
   try {
     const response = await this.makeRequest(pool, query, next);
@@ -34,23 +40,31 @@ async function getUserDataFromServer(config, query, next) {
  * @param {Object} config Config for the server connection
  * @param {Function} next Error middleware method
  */
-async function connectToServer(config, next) {
-  const pool = new sql.ConnectionPool(config);
-  const poolConnect = pool.connect();
-
-  pool.on('error', err => {
-    const error = CustomError.handleError(err.message || 'Unexpected error while trying to POST login data', err);
-    return error;
-  });
-
+async function connectToServer(config, next, backupConfig = {}) {
   try {
-    const pool = await poolConnect; // ensures that the pool has been created
-    return pool;
+    const connection = await this.openPool(config);
+    return connection;
   } catch (err) {
-    const error = CustomError.handleError(err.message || 'Unexpected error while trying to connect to server', err);
-    throw next(error);
+    if(err) {
+      try {
+        const connection = await this.openPool(backupConfig);
+        return connection;
+      } catch (err) {
+        const error = CustomError.handleError(`Error on fallback connection server :: ${err.message}` ||
+          'Unexpected error while trying to POST login data', err);
+        throw next(error);
+      }
+    }
   }
 }
+
+async function openPool(config) {
+  let pool = new sql.ConnectionPool(config);
+  let poolConnect = pool.connect();
+  pool = await poolConnect; // ensures that the pool has been created
+  return pool;
+}
+
 
 /**
  * Method to separate the request th the server
@@ -74,5 +88,6 @@ async function makeRequest(pool, query, next) {
 module.exports = {
   getUserDataFromServer,
   connectToServer,
-  makeRequest
+  makeRequest,
+  openPool
 }

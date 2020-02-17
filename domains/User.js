@@ -14,7 +14,8 @@ class User {
     this.professionalId,
     this.dentistSchedule,
     this.dentistData,
-    this.officeId
+    this.officeId,
+    this.permissions
   }
 
   updateUserData(userNewData) {
@@ -37,6 +38,19 @@ class User {
     this.dentistSchedule = es_odontologo_agenda,
     this.dentistData = es_odontologo_datos,
     this.officeId = id_sucursal
+  }
+  
+  setUserPermissions(permissions) {
+    this.permissions = permissions.map(element => {
+      return {
+        item: element.item_sistema,
+        option: element.opcion
+      }
+    });
+  }
+
+  getUserPermissions() {
+    return this.permissions;
   }
 }
 
