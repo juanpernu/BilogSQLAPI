@@ -1,7 +1,7 @@
 const APIFeatures = require('../domains/ApiFeatures');
 const User = require('../domains/User');
 const MakeQueries = require('./../utils/Queries');
-const CustomError = require('./../utils/CustomError');
+const CustomError = require('../utils/Error');
 const SQLService = require('./../services/SQLService');
 
 /**

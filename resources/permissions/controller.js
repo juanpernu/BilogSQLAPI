@@ -1,6 +1,6 @@
 const PermissionsService = require('./../../services/PermissionsService');
 const Response = require('./../../domains/Response');
-const CustomError = require('./../../utils/CustomError');
+const CustomError = require('../../utils/Error');
 
 class PermissionsController {
   static async post(req, res, next) {

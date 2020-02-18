@@ -1,5 +1,5 @@
 const sql = require('mssql');
-const CustomError = require('./../utils/CustomError');
+const CustomError = require('../utils/Error');
 const { servers: { first, second } } = require('./../utils/ServersAccess');
 const APIFeatures = require('./../domains/ApiFeatures');
 
