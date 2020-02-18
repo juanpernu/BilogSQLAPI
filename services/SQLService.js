@@ -1,7 +1,7 @@
 const sql = require('mssql');
-const CustomError = require('../utils/CustomError');
-const { servers: { first, second } } = require('../utils/ServersAccess');
-const APIFeatures = require('../domains/ApiFeatures');
+const CustomError = require('./../utils/CustomError');
+const { servers: { first, second } } = require('./../utils/ServersAccess');
+const APIFeatures = require('./../domains/ApiFeatures');
 
 /**
  * Method to get the user data on the first login.
