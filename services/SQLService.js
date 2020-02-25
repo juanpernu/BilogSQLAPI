@@ -20,7 +20,7 @@ async function getUserDataFromServer(user, query, next) {
     const response = await this.makeRequest(pool, query, next);
     pool.close();
 
-    if (response && response[0] === null) {
+    if (response && response[0] === null || response.length === 0) {
       throw error = {
         message: 'Unhautorized user :: Invalid login',
         code: 401
@@ -41,16 +41,27 @@ async function getUserDataFromServer(user, query, next) {
  * @param {Function} next Error middleware method
  */
 async function connectToServer(config, next, backupConfig = {}) {
+  console.log('CONFIG', config);
+  console.log('BKCONFIG', backupConfig);
   try {
     const connection = await this.openPool(config);
     return connection;
   } catch (err) {
+    // TODO: To get better performance, to select
+    // to wich server to connect, should do a PING
+    // If the response is ok, connect to that.
     if(err) {
+      const { message, code } = err;
+      if (code === 'ELOGIN') {
+        const error = CustomError.handleError(`Invalid login for user: ${config.user} :: ${message} :: ${code}` ||
+          'Unexpected error while trying to POST login data', err);
+        throw next(error);
+      }
       try {
         const connection = await this.openPool(backupConfig);
         return connection;
       } catch (err) {
-        const error = CustomError.handleError(`Error on fallback connection server :: ${err.message}` ||
+        const error = CustomError.handleError(`Error on fallback connection server :: ${message}` ||
           'Unexpected error while trying to POST login data', err);
         throw next(error);
       }
@@ -78,6 +89,8 @@ async function makeRequest(pool, query, next) {
   try {
     const JSONresponse = await request.query(query);
     const response = JSONresponse.recordset;
+    console.log('RESPONSE length', response.length);
+    console.log('RESPONSE item', response[0]);
     return response;
   } catch (err) {
     const error = CustomError.handleError(err.message || 'Unexpected error while trying make que request', err);

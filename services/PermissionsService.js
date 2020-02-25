@@ -23,6 +23,9 @@ async function validateUser(user, user_bilog, password, next) {
     let response = await SQLService.getUserDataFromServer(newUser, features.getQuery(), next);
     const flatted = features.flattResponse(response, 2);
 
+    console.log('flatted[0]', flatted[0]);
+    
+
     // Make a new connection with the user database data
     const { base, ip_sql, puerto } = flatted[0];
     const newConfig = features.makeConfig(false, newUser.access, ip_sql, parseInt(puerto), base);
