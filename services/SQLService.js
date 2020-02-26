@@ -46,6 +46,10 @@ async function connectToServer(config, backupConfig = {}) {
     return connection;
   } catch (err) {
     if (err.code === 'ELOGIN') {
+      err = {
+        message: 'Unhautorized user :: Invalid login',
+        code: 401,
+      }
       const error = CustomError.handleError(err.message, err);
       throw error;
     }

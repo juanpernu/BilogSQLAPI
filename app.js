@@ -18,4 +18,10 @@ App.use(cors());
 
 App.use('/permissions', permissionsRoutes);
 
+// TODO: Here I should use a custom error handler
+App.use((err, req, res, next) => {
+  res.status(err.code);
+  res.json({ error: { message: err.message, code: err.code } });
+});
+
 module.exports = App;
