@@ -13,8 +13,7 @@ class PermissionsController {
       res.status(200).send(response);
     } catch (err) {
       const error = CustomError.handleError(err.message || 'Unexpected error while trying to POST login data', err);
-      const response = new Response({ data: null, message: err.message, code: err.code });
-      res.status(error.code).send(response);
+      return res.status(err.code).send({ error: { message: error.message, code:err.code} });
     }
   }
 }
