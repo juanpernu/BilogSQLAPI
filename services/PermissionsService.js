@@ -12,7 +12,7 @@ const SQLService = require('./../services/SQLService');
  * @param {String} password User password input data
  * @param {Function} next Error middleware method
  */
-async function validateUser(user, user_bilog, password, next) {
+async function validateUser(user, user_bilog, password) {
   const newUser = new User({ user, user_bilog, password });
   const features = new APIFeatures();
 
@@ -20,11 +20,8 @@ async function validateUser(user, user_bilog, password, next) {
   features.newQuery(MakeQueries('GET_USER_DATABASE', user_bilog));
   try {
     // Get user database data
-    let response = await SQLService.getUserDataFromServer(newUser, features.getQuery(), next);
-    const flatted = features.flattResponse(response, 2);
-
-    console.log('flatted[0]', flatted[0]);
-    
+    let response = await SQLService.getUserDataFromServer(newUser, features.getQuery());
+    const flatted = features.flattResponse(response, 2);    
 
     // Make a new connection with the user database data
     const { base, ip_sql, puerto } = flatted[0];
@@ -33,26 +30,23 @@ async function validateUser(user, user_bilog, password, next) {
     features.newQuery(MakeQueries('SELECT_USER_DATABASE', user));
 
     // Get user data
-    const newPool = await SQLService.connectToServer(newConfig, next);
-    const userData = await SQLService.makeRequest(newPool, features.getQuery(), next);
+    const newPool = await SQLService.connectToServer(newConfig);
+    const userData = newPool && await SQLService.makeRequest(newPool, features.getQuery());
     newUser.updateUserData(...userData);
 
     if (userData && !newUser.isEnabled) {
-      const error = CustomError.handleError({
-        message: 'Unabled user :: This user is not enabled',
-        code: 401
-      });
+      const error = CustomError.handleError('Unabled user :: This user is not enabled', err);
       newPool.close();
       throw next(error);
     }
 
-    const permissions = await this.getPermissions(newUser, newPool, next);
+    const permissions = await this.getPermissions(newUser, newPool);
     newPool.close();
 
     return permissions;
   } catch (err) {
     const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
-    throw next(error);
+    throw error;
   }
 }
 
@@ -77,7 +71,7 @@ async function validatePermissions(user, permissionItemToValidate = '', permissi
  * @param {InstanceType} pool Server pool connection
  * @param {Function} next Error middleware method
  */
-async function getPermissions(user, pool, next) {
+async function getPermissions(user, pool) {
   const features = new APIFeatures();
   try {
     const hasPermissions = await this.validatePermissions(user);
@@ -92,7 +86,7 @@ async function getPermissions(user, pool, next) {
         user.setUserPermissions(permissions);
       } catch (err) {
         const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
-        throw next(error);
+        throw error;
       }
     }
 
@@ -101,7 +95,7 @@ async function getPermissions(user, pool, next) {
     return user;
   } catch (err) {
     const error = CustomError.handleError(err.message || 'Unexpected error while trying get user permissions', err);
-    throw next(error);
+    throw error;
   }
 }
 
