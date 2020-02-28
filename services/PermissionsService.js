@@ -1,7 +1,6 @@
 const APIFeatures = require('../domains/ApiFeatures');
 const User = require('../domains/User');
 const MakeQueries = require('./../utils/Queries');
-const CustomError = require('../utils/Error');
 const SQLService = require('./../services/SQLService');
 
 /**
@@ -10,7 +9,6 @@ const SQLService = require('./../services/SQLService');
  * @param {String} user User input data
  * @param {String} user_bilog Bilog user input data
  * @param {String} password User password input data
- * @param {Function} next Error middleware method
  */
 async function validateUser(user, user_bilog, password) {
   const newUser = new User({ user, user_bilog, password });
@@ -18,36 +16,33 @@ async function validateUser(user, user_bilog, password) {
 
   // Make the query and the config for the first connection
   features.newQuery(MakeQueries('GET_USER_DATABASE', user_bilog));
-  try {
-    // Get user database data
-    let response = await SQLService.getUserDataFromServer(newUser, features.getQuery());
-    const flatted = features.flattResponse(response, 2);    
+  // Get user database data
+  let response = await SQLService.getUserDataFromServer(newUser, features.getQuery());
+  const flatted = features.flattResponse(response, 2);
 
-    // Make a new connection with the user database data
-    const { base, ip_sql, puerto } = flatted[0];
-    const newConfig = features.makeConfig(false, newUser.access, ip_sql, parseInt(puerto), base);
-    
-    features.newQuery(MakeQueries('SELECT_USER_DATABASE', user));
+  // Make a new connection with the user database data
+  const { base, ip_sql, puerto } = flatted[0];
+  const newConfig = features.makeConfig(false, newUser.access, ip_sql, parseInt(puerto), base);
 
-    // Get user data
-    const newPool = await SQLService.connectToServer(newConfig);
-    const userData = newPool && await SQLService.makeRequest(newPool, features.getQuery());
-    newUser.updateUserData(...userData);
+  features.newQuery(MakeQueries('SELECT_USER_DATABASE', user));
 
-    if (userData && !newUser.isEnabled) {
-      const error = CustomError.handleError('Unabled user :: This user is not enabled', err);
-      newPool.close();
-      throw next(error);
-    }
+  // Get user data
+  const newPool = await SQLService.connectToServer(newConfig);
+  const userData = newPool && await SQLService.makeRequest(newPool, features.getQuery());
+  newUser.updateUserData(...userData);
 
-    const permissions = await this.getPermissions(newUser, newPool);
+  if (userData && !newUser.isEnabled) {
     newPool.close();
-
-    return permissions;
-  } catch (err) {
-    const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
-    throw error;
+    throw error = {
+      message: `User ${user} is not enabled`,
+      code: err.code
+    };
   }
+
+  const permissions = await this.getPermissions(newUser, newPool);
+  newPool.close();
+
+  return permissions;
 }
 
 /**
@@ -55,48 +50,36 @@ async function validateUser(user, user_bilog, password) {
  * to operate in the sistem.
  * @param {User} user User instance
  * @param {InstanceType} pool Server pool connection
- * @param {Function} next Error middleware method
  * @param {String} permissionItemToValidate Permission item to validate
  * @param {String} permissionToValidate General permission to validate
  */
-async function validatePermissions(user, permissionItemToValidate = '', permissionToValidate = '') {
-  const isFirstLogin = !user.isSupervisor && permissionItemToValidate === '' && permissionToValidate === '';
-  if (isFirstLogin || user.isSupervisor) return true;
-  return false;
+async function validatePermissions(user, pool, permissionItemToValidate = '', permissionToValidate = '') {
+  if (user.isSupervisor) return true;
+  const features = new APIFeatures();
+  features.newQuery(MakeQueries('VALIDATE_PERMISSION', user.id));
+  const permissions = await SQLService.makeRequest(pool, features.getQuery());
+  return permissions;
 }
 
 /**
  * Method to get users permissions.
  * @param {User} user User instance
  * @param {InstanceType} pool Server pool connection
- * @param {Function} next Error middleware method
  */
 async function getPermissions(user, pool) {
-  const features = new APIFeatures();
-  try {
-    const hasPermissions = await this.validatePermissions(user);
+  const permissions = await this.validatePermissions(user, pool);
+  const hasPermissions = permissions.length >= 1;
 
-    // If the user is supervisor or is the first
-    // login of the user, doesn't make sense get
-    // the user permissions from the database.
-    if (!hasPermissions) {
-      features.newQuery(MakeQueries('VALIDATE_PERMISSION', user.id));
-      try {
-        const permissions = await SQLService.makeRequest(pool, features.getQuery());
-        user.setUserPermissions(permissions);
-      } catch (err) {
-        const error = CustomError.handleError(err.message || 'Unexpected error while trying to Validate user data', err);
-        throw error;
-      }
-    }
-
-    // If the user is supervisor or is the first login
-    // here just return the user object without permissions
-    return user;
-  } catch (err) {
-    const error = CustomError.handleError(err.message || 'Unexpected error while trying get user permissions', err);
-    throw error;
+  // If the user is supervisor or is the first
+  // login of the user, doesn't make sense get
+  // the user permissions from the database.
+  if (hasPermissions) {
+    user.setUserPermissions(permissions);
   }
+
+  // If the user is supervisor or is the first login
+  // here just return the user object without permissions
+  return user;
 }
 
 module.exports = {
