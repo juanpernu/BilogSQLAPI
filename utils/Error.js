@@ -1,17 +1,12 @@
-class CustomError extends Error {
-  constructor({ message, code }) {
-    super(message);
-    this.code = code;
+const ErrorHandler = (err, _req, res, _next) => {
+  const status = err.status || err.code || 500;
+  const error = {
+    message: err.message,
+    code: status,
+    stack: err.stack,
   }
-
-  static handleError(message = 'Unexpected error', error = {}) {
-    const status = error.status || error.code || 500;
-    if (error instanceof CustomError) {
-      return error;
-    }
-    const err = new CustomError({ message, code: status });
-    return err;
-  }
+  res.status(status);
+  res.json({ error });
 }
 
-module.exports = CustomError;
+module.exports = ErrorHandler;
